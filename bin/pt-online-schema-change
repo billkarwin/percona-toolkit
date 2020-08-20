@@ -3914,7 +3914,7 @@ sub new {
    };
    my ($dp, $o) = @args{@required_args};
 
-   my $dsn_defaults = $dp->parse_options($o);  
+   my $dsn_defaults = $dp->parse_options($o);
    my $prev_dsn     = $args{prev_dsn};
    my $dsn          = $args{dsn};
    if ( !$dsn ) {
@@ -4166,22 +4166,22 @@ use warnings FATAL => 'all';
 use English qw(-no_match_vars);
 use constant PTDEBUG => $ENV{PTDEBUG} || 0;
 
-sub check_recursion_method {                                                       
+sub check_recursion_method {
    my ($methods) = @_;
-   if ( @$methods != 1 ) {                                                         
-      if ( grep({ !m/processlist|hosts/i } @$methods)                              
-            && $methods->[0] !~ /^dsn=/i ) 
-      {     
-         die  "Invalid combination of recursion methods: "                         
-            . join(", ", map { defined($_) ? $_ : 'undef' } @$methods) . ". "      
-            . "Only hosts and processlist may be combined.\n"                      
-      }                                                                            
-   }     
-   else {   
+   if ( @$methods != 1 ) {
+      if ( grep({ !m/processlist|hosts/i } @$methods)
+            && $methods->[0] !~ /^dsn=/i )
+      {
+         die  "Invalid combination of recursion methods: "
+            . join(", ", map { defined($_) ? $_ : 'undef' } @$methods) . ". "
+            . "Only hosts and processlist may be combined.\n"
+      }
+   }
+   else {
       my ($method) = @$methods;
-      die "Invalid recursion method: " . ( $method || 'undef' )                    
-         unless $method && $method =~ m/^(?:processlist$|hosts$|none$|cluster$|dsn=)/i;     
-   }                                                                               
+      die "Invalid recursion method: " . ( $method || 'undef' )
+         unless $method && $method =~ m/^(?:processlist$|hosts$|none$|cluster$|dsn=)/i;
+   }
 }
 
 sub new {
@@ -4210,7 +4210,7 @@ sub get_slaves {
    my $methods = $self->_resolve_recursion_methods($args{dsn});
 
    return $slaves unless @$methods;
-   
+
    if ( grep { m/processlist|hosts/i } @$methods ) {
       my @required_args = qw(dbh dsn);
       foreach my $arg ( @required_args ) {
@@ -4223,7 +4223,7 @@ sub get_slaves {
          {  dbh            => $dbh,
             dsn            => $dsn,
             slave_user     => $o->got('slave-user') ? $o->get('slave-user') : '',
-            slave_password => $o->got('slave-password') ? $o->get('slave-password') : '', 
+            slave_password => $o->got('slave-password') ? $o->get('slave-password') : '',
             callback  => sub {
                my ( $dsn, $dbh, $level, $parent ) = @_;
                return unless $level;
@@ -4792,7 +4792,7 @@ sub short_host {
 }
 
 sub is_replication_thread {
-   my ( $self, $query, %args ) = @_; 
+   my ( $self, $query, %args ) = @_;
    return unless $query;
 
    my $type = lc($args{type} || 'all');
@@ -4807,7 +4807,7 @@ sub is_replication_thread {
    if ( !$match ) {
       if ( ($query->{User} || $query->{user} || '') eq "system user" ) {
          PTDEBUG && _d("Slave replication thread");
-         if ( $type ne 'all' ) { 
+         if ( $type ne 'all' ) {
             my $state = $query->{State} || $query->{state} || '';
 
             if ( $state =~ m/^init|end$/ ) {
@@ -4820,7 +4820,7 @@ sub is_replication_thread {
                    |Reading\sevent\sfrom\sthe\srelay\slog
                    |Has\sread\sall\srelay\slog;\swaiting
                    |Making\stemp\sfile
-                   |Waiting\sfor\sslave\smutex\son\sexit)/xi; 
+                   |Waiting\sfor\sslave\smutex\son\sexit)/xi;
 
                $match = $type eq 'slave_sql' &&  $slave_sql ? 1
                       : $type eq 'slave_io'  && !$slave_sql ? 1
@@ -4884,7 +4884,7 @@ sub get_replication_filters {
          replicate_do_db
          replicate_ignore_db
          replicate_do_table
-         replicate_ignore_table 
+         replicate_ignore_table
          replicate_wild_do_table
          replicate_wild_ignore_table
       );
@@ -4895,7 +4895,7 @@ sub get_replication_filters {
       $filters{slave_skip_errors} = $row->[1] if $row->[1] && $row->[1] ne 'OFF';
    }
 
-   return \%filters; 
+   return \%filters;
 }
 
 
@@ -5016,8 +5016,6 @@ sub wait {
    my $pr_callback;
    my $pr_first_report;
 
-   ### refresh list of slaves. In: self passed to wait()
-   ### Returns: new slave list
    my $pr_refresh_slave_list = sub {
       my ($self) = @_;
       my ($slaves, $refresher) = ($self->{slaves}, $self->{get_slaves_cb});
@@ -5036,8 +5034,6 @@ sub wait {
    $slaves = $pr_refresh_slave_list->($self);
 
    if ( $pr ) {
-      # If you use the default Progress report callback, you'll need to
-      # to add Transformers.pm to this tool.
       $pr_callback = sub {
          my ($fraction, $elapsed, $remaining, $eta, $completed) = @_;
          my $dsn_name = $worst->{cxn}->name();
@@ -5049,33 +5045,28 @@ sub wait {
             if ($self->{fail_on_stopped_replication}) {
                 die 'replication is stopped';
             }
-            print STDERR "(1) Replica '$dsn_name' is stopped.  Waiting.\n";
+            print STDERR "Replica $dsn_name is stopped.  Waiting.\n";
          }
          return;
       };
       $pr->set_callback($pr_callback);
 
-      # If a replic is stopped, don't wait 30s (or whatever interval)
-      # to report this.  Instead, report it once, immediately, then
-      # keep reporting it every interval.
       $pr_first_report = sub {
          my $dsn_name = $worst->{cxn}->name();
          if ( !defined $worst->{lag} ) {
             if ($self->{fail_on_stopped_replication}) {
                 die 'replication is stopped';
             }
-            print STDERR "(2) Replica '$dsn_name' is stopped.  Waiting.\n";
+            print STDERR "Replica $dsn_name is stopped.  Waiting.\n";
          }
          return;
       };
    }
 
-   # First check all slaves.
    my @lagged_slaves = map { {cxn=>$_, lag=>undef} } @$slaves;
    while ( $oktorun->() && @lagged_slaves ) {
       PTDEBUG && _d('Checking slave lag');
 
-      ### while we were waiting our list of slaves may have changed
       $slaves = $pr_refresh_slave_list->($self);
       my $watched = 0;
       @lagged_slaves = grep {
@@ -5101,10 +5092,8 @@ sub wait {
          }
       }
 
-      # Remove slaves that aren't lagging.
       @lagged_slaves = grep { defined $_ } @lagged_slaves;
       if ( @lagged_slaves ) {
-         # Sort lag, undef is highest because it means the slave is stopped.
          @lagged_slaves = reverse sort {
               defined $a->{lag} && defined $b->{lag} ? $a->{lag} <=> $b->{lag}
             : defined $a->{lag}                      ? -1
@@ -5115,10 +5104,6 @@ sub wait {
             $worst->{lag}, 'on', Dumper($worst->{cxn}->dsn()));
 
          if ( $pr ) {
-            # There's no real progress because we can't estimate how long
-            # it will take all slaves to catch up.  The progress reports
-            # are just to inform the user every 30s which slave is still
-            # lagging this most.
             $pr->update(
                sub { return 0; },
                first_report => $pr_first_report,
@@ -5388,7 +5373,7 @@ sub wait {
             die "$var=$val exceeds its critical threshold "
                . "$self->{critical_val_for}->{$var}\n";
          }
-         if ( $val >= $self->{max_val_for}->{$var} ) {
+         if ( $val && $val >= $self->{max_val_for}->{$var} ) {
             $vals_too_high{$var} = $val;
          }
          else {
@@ -7656,13 +7641,15 @@ sub version_check {
          return;
       }
       PTDEBUG && _d('Using', $protocol);
+      my $url = $args{url}                       # testing
+                || $ENV{PERCONA_VERSION_CHECK_URL}  # testing
+                || "$protocol://v.percona.com";
+      PTDEBUG && _d('API URL:', $url);
 
       my $advice = pingback(
          instances => $instances_to_check,
          protocol  => $protocol,
-         url       => $args{url}                       # testing
-                   || $ENV{PERCONA_VERSION_CHECK_URL}  # testing
-                   || "$protocol://v.percona.com",
+         url       => $url,
       );
       if ( $advice ) {
          PTDEBUG && _d('Advice:', Dumper($advice));
@@ -7820,9 +7807,14 @@ sub get_uuid {
     my $filename = $ENV{"HOME"} . $uuid_file;
     my $uuid = _generate_uuid();
 
-    open(my $fh, '>', $filename) or die "Could not open file '$filename' $!";
-    print $fh $uuid;
-    close $fh;
+    my $fh;
+    eval {
+        open($fh, '>', $filename);
+    };
+    if (!$EVAL_ERROR) {
+        print $fh $uuid;
+        close $fh;
+    }
 
     return $uuid;
 }   
@@ -7888,8 +7880,9 @@ sub pingback {
       general_id => get_uuid(),
    );
 
+   my $tool_name = $ENV{XTRABACKUP_VERSION} ? "Percona XtraBackup" : File::Basename::basename($0);
    my $client_response = {
-      headers => { "X-Percona-Toolkit-Tool" => File::Basename::basename($0) },
+      headers => { "X-Percona-Toolkit-Tool" => $tool_name },
       content => $client_content,
    };
    PTDEBUG && _d('Client response:', Dumper($client_response));
@@ -7972,6 +7965,7 @@ my %sub_for_type = (
    perl_version        => \&get_perl_version,
    perl_module_version => \&get_perl_module_version,
    mysql_variable      => \&get_mysql_variable,
+   xtrabackup          => \&get_xtrabackup_version,
 );
 
 sub valid_item {
@@ -8097,6 +8091,10 @@ sub get_perl_version {
    my $version = sprintf '%vd', $PERL_VERSION;
    PTDEBUG && _d('Perl version', $version);
    return $version;
+}
+
+sub get_xtrabackup_version {
+    return $ENV{XTRABACKUP_VERSION};
 }
 
 sub get_perl_module_version {
